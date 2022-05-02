@@ -1,19 +1,21 @@
 const express = require('express');
 const app = express();
 const port = 5500;
-const multer  = require('multer')
+const multer = require('multer')
 const upload = multer({
     dest: 'uploads/'
 })
 const fs = require("fs");
+const child_process = require('child_process');
+const path = require('path');
 
 // 允许跨域
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Headers', 'Authorization,X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method' )
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PATCH, PUT, DELETE')
-  res.header('Allow', 'GET, POST, PATCH, OPTIONS, PUT, DELETE')
-  next();
+    res.header('Access-Control-Allow-Origin', '*')
+    res.header('Access-Control-Allow-Headers', 'Authorization,X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PATCH, PUT, DELETE')
+    res.header('Allow', 'GET, POST, PATCH, OPTIONS, PUT, DELETE')
+    next();
 });
 
 app.get('/', (req, res) => {
@@ -27,6 +29,8 @@ app.get('/api/city', (req, res) => {
 });
 
 // 上传文件
+
+let fileNameList = [];
 
 // 允许直接访问静态文件
 app.use('/uploads', express.static('uploads'));
@@ -60,8 +64,9 @@ app.post('/api/upload', (req, res) => {
         });
         resArr.push(`/uploads/${item.filename + suffix}`)
     });
+    fileNameList = resArr;
     res.send({
-        error: 0,
+        code: 0,
         data: req.body,
         msg: resArr
     })
@@ -69,6 +74,28 @@ app.post('/api/upload', (req, res) => {
     //     'code': 1,
     //     message: resArr
     // })
+})
+
+app.get('/api/detect-video', (req, res) => {
+    let workerProcess = child_process.exec('conda activate cuda113py36 && cd ..\\Human-Falling-Detect-Tracks\\ && python main.py -C ..\\fall-detection-backend' + fileNameList[0] + ' --save_out ..\\fall-detection-backend\\out\\out.mp4', function (error, stdout, stderr) {
+        if (error) {
+            console.log(error.stack);
+            console.log('Error code: ' + error.code);
+            console.log('Signal received: ' + error.signal);
+        }
+        console.log('stdout: ' + stdout);
+        console.log('stderr: ' + stderr);
+    });
+    workerProcess.on('exit', function (code) {
+        console.log('子进程已退出，退出码 ' + code);
+        res.send({code: code});
+    });
+})
+
+app.get('/api/video-result', (req, res) => {
+    const videoPath = path.resolve(__dirname, './out/out.mp4');
+    const readStream = fs.createReadStream(videoPath);
+    readStream.pipe(res);
 })
 
 app.listen(port, () => {
