@@ -87,10 +87,6 @@ app.post("/api/upload", (req, res) => {
     data: req.body,
     msg: resArr,
   });
-  // res.send(200, {
-  //     'code': 1,
-  //     message: resArr
-  // })
 });
 
 // 检测程序是否在运行
@@ -141,7 +137,6 @@ app.get("/api/taskList", (req, res) => {
 
 // 开启摄像头推流
 app.get("/api/camera/open", (req, res) => {
-  // let workerProcess = spawn(streamStartCommand, {shell: true});
   processObj.cameraProcess = exec(streamStartCommand, showSTD);
   res.send({ code: 0 }); // 应该返回直播地址
 });
@@ -149,7 +144,7 @@ app.get("/api/camera/open", (req, res) => {
 // 关闭摄像头推流
 app.get("/api/camera/close", (req, res) => {
   if (processObj.cameraProcess) {
-    processObj.cameraProcess.on("close", function (code) {
+    processObj.cameraProcess.on("exit", function (code) {
       console.log("摄像头推流进程已退出，退出码 " + code);
       res.send({ code: code, msg: "摄像头推流进程退出" });
     });
